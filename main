@@ -1,0 +1,233 @@
+#include <EncButton.h>
+#include <TimerMs.h>
+#include <Wire.h>
+#include <GyverOLED.h>
+//testt
+GyverOLED<SSH1106_128x64, OLED_NO_BUFFER> oled;
+
+TimerMs tmr_all_reset (180000, 0, 1); //180000
+
+Button pet1(2);
+Button pet2(3);
+Button pet3(4);
+Button pet4(5);
+Button reset_button(6);
+
+bool loop_on1;
+bool loop_on2;
+bool loop_on3;
+bool loop_on4;
+
+bool traffic_light1;
+bool traffic_light2;
+
+int timeout_loop_on = 10000;
+
+int car_counter;
+
+unsigned long timer;
+unsigned long timer_animation;
+
+int step_animatoin;
+
+void setup() {
+  Serial.begin(115200);
+
+  oled.init();              // инициализация
+  Wire.setClock(400000L);
+  oled.clear();
+  oled.update();
+  oled.autoPrintln(false);
+  oled.clear();
+  oled.setCursorXY(0, 10);
+  oled.setScale(1);
+  oled.print("ТОКСБ_DEW!!!");
+
+  delay(300);
+  oled.clear();
+  oled.setScale(2);
+  oled.setCursorXY(0, 15);
+  oled.print("ТОКСБ_DEW!!!");
+
+  delay(300);
+  oled.clear();
+  oled.setScale(3);
+  oled.setCursorXY(0, 20);
+  oled.print("ТОКСБ_DEW!!!");
+
+  delay(300);
+  oled.clear();
+  oled.setScale(4);
+  oled.setCursorXY(0, 25);
+  oled.print("ТОКСБ_DEW!!!");
+
+  delay(300);
+
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+
+  oled.clear();
+
+
+}
+
+void loop() {
+
+  pet1.tick();
+  pet2.tick();
+  pet3.tick();
+  pet4.tick();
+  reset_button.tick();
+
+  if (pet1.press()){
+    loop_on1 = true;
+    Serial.println("loop_on1 = true;");
+  }
+
+  if (pet1.timeout(timeout_loop_on)){
+    loop_on1 = false;
+    Serial.println("loop_on1 = false;");
+  }
+
+  if (pet2.press()){
+    loop_on2 = true;
+    Serial.println("loop_on2 = true;");
+    tmr_all_reset.start();
+  }
+
+  if (pet2.timeout(timeout_loop_on)){
+    loop_on2 = false;
+    Serial.println("loop_on2 = false;");
+  }
+
+  if (pet3.press()){
+    loop_on3 = true;
+    Serial.println("loop_on3 = true;");
+    tmr_all_reset.start();
+  }
+
+  if (pet3.timeout(timeout_loop_on)){
+    loop_on3 = false;
+    Serial.println("loop_on3 = false;");
+  }
+
+  if (pet4.press()){
+    loop_on4 = true;
+    Serial.println("loop_on4 = true;");
+  }
+
+  if (pet4.timeout(timeout_loop_on)){
+    loop_on4 = false;
+    Serial.println("loop_on4 = false;");
+  }
+
+  if ((loop_on1 == true) && (pet2.press()) && (car_counter >=0)) // проезд от 1-ой на 2-ую
+  {
+    car_counter = car_counter + 1;
+    Serial.println("traffic_light1 = true");
+  }
+
+  if ((loop_on4 == true) && (pet3.press()) && (car_counter <=0)) // проезд от 4-ой на 3-ую
+  {
+    car_counter = car_counter - 1;
+    Serial.println("traffic_light2 = true");
+  }
+
+  if((loop_on3 == true) && (pet4.press()) && (car_counter > 0)) // выезд от 3-ой на 4-ую
+  { 
+    car_counter = car_counter - 1;
+    Serial.println("traffic_light1 = false;");
+    tmr_all_reset.start();
+    tmr_all_reset.stop();
+  }
+
+  if((loop_on2 == true) && (pet1.press()) && (car_counter < 0)) // выезд от 2-ой на 1-ую
+  {
+    car_counter = car_counter + 1;
+    Serial.println("traffic_light2 = false;");
+    tmr_all_reset.start();
+    tmr_all_reset.stop();
+  }
+
+  if (car_counter > 0){
+    digitalWrite(10, HIGH);
+  }else{
+    digitalWrite(10, LOW);
+  }
+
+  if (car_counter < 0){
+    digitalWrite(11, HIGH);
+  }else{
+    digitalWrite(11, LOW);
+  }
+
+  if (tmr_all_reset.tick() || (reset_button.press())){
+  loop_on1 = false;
+  loop_on2 = false;
+  loop_on3 = false;
+  loop_on4 = false;
+
+  tmr_all_reset.start();
+  tmr_all_reset.stop();
+
+  car_counter = 0;
+    Serial.println("status fors stop");
+  }
+
+  if (millis() - timer > 200) {
+    timer = millis();
+    oled.setCursor(0, 0);
+    oled.setScale(1);
+    oled.println("вектор движения");
+    oled.setScale(2);
+    
+
+    if (car_counter == 0){
+      oled.setCursorXY(10, 20);
+      oled.println("X<- ->X");
+    }
+
+    if (car_counter > 0){
+      oled.setCursorXY(10, 20);
+      oled.println("->" + String(abs(car_counter)) + "     ");
+    }
+
+    if (car_counter < 0){
+      oled.setCursorXY(10, 20);
+      oled.println(String(abs(car_counter)) + "<-" + "     ");
+    }
+
+  }
+
+
+    if (millis() - timer_animation > 300) {
+    timer_animation = millis();
+    oled.setScale(1);
+    oled.setCursorXY(120, 55);
+    if (step_animatoin == 4) step_animatoin = 0;
+    switch (step_animatoin)
+    {
+    case 1:
+      oled.println("/");
+    break;
+    
+    case 2:
+      oled.println("-");
+    break;
+
+    case 3:
+      oled.line(120,55,125,60);
+    break;
+  
+    case 0:
+      oled.println("|");
+    break;
+
+    default:
+      break;
+    }
+
+    step_animatoin = step_animatoin + 1;
+  }
+
+}
